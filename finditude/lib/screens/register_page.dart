@@ -1,10 +1,85 @@
-// ignore_for_file: prefer_const_constructors
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 
-class RegisterPage extends StatelessWidget {
+class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
+
+  @override
+  State<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends State<RegisterPage> {
+  //All TextEditingControllers
+  final TextEditingController firstNameController = TextEditingController();
+
+  final TextEditingController lastNameController = TextEditingController();
+
+  final TextEditingController emailController = TextEditingController();
+
+  final TextEditingController passwordController = TextEditingController();
+
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
+
+  void postData(String firstName, String lastName, String email,
+      String password, String confirmPassword) async {
+    if (firstName == "" || lastName == "" || email == "" || password == "") {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("One or more fields are empty!",
+            style: TextStyle(color: Colors.white)),
+        backgroundColor: Color.fromARGB(255, 59, 59, 59),
+      ));
+      return;
+    }
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Passwords must match!",
+            style: TextStyle(color: Colors.white)),
+        backgroundColor: Color.fromARGB(255, 59, 59, 59),
+      ));
+      return;
+    }
+    try {
+      Map data = {
+        "first_name": firstName,
+        "last_name": lastName,
+        "email": email,
+        "password": password,
+      };
+      Map<String, String> header = {
+        "Content-Type": "application/json",
+      };
+      var body = jsonEncode(data);
+      final response = await http.post(
+          Uri.parse("http://192.168.1.168:8000/api/register"),
+          headers: header,
+          body: body);
+      if (response.statusCode == 403) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("A user with this email already exists!",
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: Color.fromARGB(255, 59, 59, 59),
+          ));
+        }
+        return;
+      } else {
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+      }
+    } catch (err) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("There was an unexpected error!",
+            style: TextStyle(color: Colors.white)),
+        backgroundColor: Color.fromARGB(255, 59, 59, 59),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -21,7 +96,7 @@ class RegisterPage extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        physics: NeverScrollableScrollPhysics(),
+        physics: const NeverScrollableScrollPhysics(),
         child: Container(
           width: size.width,
           height: size.height,
@@ -45,9 +120,10 @@ class RegisterPage extends StatelessWidget {
                   color: Color(0xff141215),
                   borderRadius: BorderRadius.all(Radius.circular(20)),
                 ),
-                child: const TextField(
-                  cursorColor: Color(0xff1cb439),
-                  decoration: InputDecoration(
+                child: TextField(
+                  controller: firstNameController,
+                  cursorColor: const Color(0xff1cb439),
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: "First Name",
                   ),
@@ -64,14 +140,15 @@ class RegisterPage extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(20)),
                 ),
                 child: TextField(
-                  cursorColor: Color(0xff1cb439),
-                  decoration: InputDecoration(
+                  controller: lastNameController,
+                  cursorColor: const Color(0xff1cb439),
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: "Last Name",
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 20,
               ),
               Container(
@@ -82,14 +159,15 @@ class RegisterPage extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(20)),
                 ),
                 child: TextField(
-                  cursorColor: Color(0xff1cb439),
-                  decoration: InputDecoration(
+                  controller: emailController,
+                  cursorColor: const Color(0xff1cb439),
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: "Email",
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 20,
               ),
               Container(
@@ -100,16 +178,17 @@ class RegisterPage extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(20)),
                 ),
                 child: TextField(
+                  controller: passwordController,
                   obscureText: true,
                   autocorrect: false,
-                  cursorColor: Color(0xff1cb439),
-                  decoration: InputDecoration(
+                  cursorColor: const Color(0xff1cb439),
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: "Password",
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 20,
               ),
               Container(
@@ -120,38 +199,44 @@ class RegisterPage extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(20)),
                 ),
                 child: TextField(
+                  controller: confirmPasswordController,
                   obscureText: true,
                   autocorrect: false,
-                  cursorColor: Color(0xff1cb439),
-                  decoration: InputDecoration(
+                  cursorColor: const Color(0xff1cb439),
+                  decoration: const InputDecoration(
                     border: InputBorder.none,
                     hintText: "Confirm Password",
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 30,
               ),
               Column(
                 children: [
                   ElevatedButton(
-                    onPressed: () => {},
+                    onPressed: () => postData(
+                        firstNameController.text,
+                        lastNameController.text,
+                        emailController.text,
+                        passwordController.text,
+                        confirmPasswordController.text),
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
-                      backgroundColor: Color.fromARGB(255, 34, 182, 46),
+                      backgroundColor: const Color.fromARGB(255, 34, 182, 46),
                       foregroundColor: Colors.black,
-                      padding: EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(18),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20)),
                     ),
-                    child: Center(
+                    child: const Center(
                         child: Text(
                       "Register",
                       style: TextStyle(
                           fontWeight: FontWeight.bold, color: Colors.black),
                     )),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 30,
                   ),
                   GestureDetector(
