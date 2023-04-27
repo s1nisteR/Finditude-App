@@ -3,7 +3,7 @@ import 'package:finditude/screens/login_page.dart';
 import 'package:finditude/services/UserPreferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-
+import 'package:finditude/screens/start_finding_page.dart';
 import './themes/app_theme.dart';
 
 void main() async {
@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
-        home: const LoginPage(),
+        home: const StartFindingPage(3),
       );
     } else {
       return MaterialApp(
@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
         darkTheme: AppTheme.dark,
         themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
-        home: const HomePage(),
+        home: const StartFindingPage(3),
       );
     }
   }

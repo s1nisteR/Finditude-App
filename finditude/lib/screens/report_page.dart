@@ -76,7 +76,6 @@ class _ReportPageState extends State<ReportPage> {
   void initState() {
     super.initState();
     token = UserPreferences.getToken();
-    debugPrint(token);
   }
 
   @override
