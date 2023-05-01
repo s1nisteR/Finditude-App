@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:finditude/services/UserPreferences.dart';
 import 'package:finditude/screens/report_page.dart';
+import 'package:finditude/screens/volunteer.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -66,8 +67,7 @@ class _HomePageState extends State<HomePage> {
                   child: InkWell(
                     splashColor: Colors.blue.withAlpha(30),
                     onTap: () {
-                      //for testing only, will cause the user preferences to clear up
-                      UserPreferences.setToken("");
+                      Navigator.of(context).push(homeToVolunteerPage());
                     },
                     child: const SizedBox(
                         width: 340,
@@ -98,6 +98,25 @@ class _HomePageState extends State<HomePage> {
 Route homeToReportMissing() {
   return PageRouteBuilder(
     pageBuilder: (context, animation, secondaryAnimation) => const ReportPage(),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const begin = Offset(0.0, 1.0);
+      const end = Offset.zero;
+      const curve = Curves.ease;
+
+      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+      return SlideTransition(
+        position: animation.drive(tween),
+        child: child,
+      );
+    },
+  );
+}
+
+Route homeToVolunteerPage() {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) =>
+        const VolunteerPage(),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       const begin = Offset(0.0, 1.0);
       const end = Offset.zero;
