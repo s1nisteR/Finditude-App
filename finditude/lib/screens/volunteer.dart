@@ -192,7 +192,7 @@ class _VolunteerPageState extends State<VolunteerPage> {
 class MissingPerson {
   final int id;
   final String fullName;
-  final imageURL;
+  final String imageURL;
 
   const MissingPerson({
     required this.id,
