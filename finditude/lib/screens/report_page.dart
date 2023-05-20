@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:finditude/services/UserPreferences.dart';
+import 'package:finditude/screens/missing_image_page.dart';
 
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
@@ -15,6 +16,7 @@ class ReportPage extends StatefulWidget {
 class _ReportPageState extends State<ReportPage> {
   String token = "";
   String gender = "Other";
+  int? reportedID;
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController ageController = TextEditingController();
   final TextEditingController identifyingInfoController =
@@ -26,7 +28,7 @@ class _ReportPageState extends State<ReportPage> {
     "Other",
   ];
 
-  void postData(String fullName, String age, String gender,
+  Future<int?> postData(String fullName, String age, String gender,
       String identifyingInfo) async {
     if (fullName == "" || age == "" || gender == "") {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -34,7 +36,7 @@ class _ReportPageState extends State<ReportPage> {
             style: TextStyle(color: Colors.white)),
         backgroundColor: Color.fromARGB(255, 59, 59, 59),
       ));
-      return;
+      return null;
     }
     try {
       Map data = {
@@ -53,9 +55,13 @@ class _ReportPageState extends State<ReportPage> {
           headers: header,
           body: body);
       if (response.statusCode == 200) {
+        var jsonResponse = jsonDecode(response.body);
+        int reportedID = jsonResponse['id'];
+        print(reportedID);
         if (context.mounted) {
           Navigator.of(context).pop();
         }
+        return reportedID;
       } else if (response.statusCode == 401) {
         //token may have expired, back to login you go!
         if (context.mounted) {
@@ -70,6 +76,7 @@ class _ReportPageState extends State<ReportPage> {
       //handle when response returned states user is unauthenticated by redirecting to login page
       debugPrint(err.toString());
     }
+    return null;
   }
 
   @override
@@ -248,9 +255,30 @@ class _ReportPageState extends State<ReportPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ElevatedButton(
-                    onPressed: () {
-                      postData(fullNameController.text, ageController.text,
-                          gender, identifyingInfoController.text);
+                    onPressed: () async {
+                      reportedID = await postData(
+                          fullNameController.text,
+                          ageController.text,
+                          gender,
+                          identifyingInfoController.text);
+
+                      //print(reportedID);
+                      if (reportedID != null) {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: ((context) => MissingImagePage(
+                                    id: reportedID!, token: token))));
+                      } else {
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const LoginPage()),
+                            (Route<dynamic> route) => false,
+                          );
+                        }
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
