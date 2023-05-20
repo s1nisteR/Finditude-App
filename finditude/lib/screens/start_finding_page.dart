@@ -15,13 +15,73 @@ class StartFindingPage extends StatefulWidget {
 
 class _StartFindingPageState extends State<StartFindingPage> {
   String token = "";
+  List<String> imageUrls = [];
   late Future<MissingPerson> futureMissingPerson;
+
+  Future<List<String>> fetchMissingImages(int id) async {
+    const url = 'http://192.168.1.168:8000/api/missingimageget';
+    final body = jsonEncode({'jwt': token, 'id': id.toString()});
+    Map<String, String> header = {
+      "Content-Type": "application/json",
+    };
+    final response =
+        await http.post(Uri.parse(url), headers: header, body: body);
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      final List<dynamic> imageList = jsonResponse['images'];
+      final List<String> images = imageList.cast<String>().toList();
+      return images;
+    } else {
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    }
+    return [];
+  }
 
   @override
   void initState() {
     super.initState();
     token = UserPreferences.getToken();
     futureMissingPerson = fetchMissingPerson(token, widget.id, context);
+    fetchMissingImages(widget.id).then((images) {
+      setState(() {
+        imageUrls = images;
+      });
+    }).catchError((error) {
+      // Handle any error that occurred during API call
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    });
+  }
+
+  void openImageSlider(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            height: MediaQuery.of(context).size.height * 0.8,
+            child: ListView.builder(
+              itemCount: imageUrls.length,
+              itemBuilder: (context, index) {
+                return Image.network(imageUrls[index]);
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -44,70 +104,91 @@ class _StartFindingPageState extends State<StartFindingPage> {
             if (snapshot.hasData) {
               return Column(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FittedBox(
-                          child: Text(
-                            snapshot.data!.fullName,
-                            style: GoogleFonts.dmSans(
-                              textStyle:
-                                  Theme.of(context).textTheme.displayLarge,
-                            ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            openImageSlider(context);
+                          },
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            color: Colors.grey,
+                            child: imageUrls.isNotEmpty
+                                ? Image.network(
+                                    imageUrls[0],
+                                    fit: BoxFit.cover,
+                                  )
+                                : const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
                           ),
                         ),
-                      )
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        "Age: ${snapshot.data!.age}",
-                        style: GoogleFonts.dmSans(
-                          textStyle: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      )
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        "Gender: ${snapshot.data!.gender}",
-                        style: GoogleFonts.dmSans(
-                          textStyle: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                  Row(
-                    children: [
-                      Text("Identifying Information",
-                          style: GoogleFonts.dmSans(
-                            textStyle:
-                                Theme.of(context).textTheme.headlineSmall,
-                            color: const Color.fromARGB(255, 136, 136, 136),
-                          ))
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: Text(
-                            snapshot.data!.identifyingInfo,
-                            style: GoogleFonts.dmSans(
-                              textStyle: Theme.of(context).textTheme.bodyLarge,
-                            ),
-                            softWrap: true,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                snapshot.data!.fullName,
+                                style: GoogleFonts.dmSans(
+                                  textStyle:
+                                      Theme.of(context).textTheme.titleLarge,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Age: ${snapshot.data!.age}",
+                                    style: GoogleFonts.dmSans(
+                                      textStyle: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Gender: ${snapshot.data!.gender}",
+                                    style: GoogleFonts.dmSans(
+                                      textStyle: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      )
-                    ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      "Identifying Information",
+                      style: GoogleFonts.dmSans(
+                        textStyle: Theme.of(context).textTheme.titleMedium,
+                        color: const Color.fromARGB(255, 136, 136, 136),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      snapshot.data!.identifyingInfo,
+                      style: GoogleFonts.dmSans(
+                        textStyle: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Expanded(
                         child: ElevatedButton(
@@ -118,22 +199,22 @@ class _StartFindingPageState extends State<StartFindingPage> {
                             foregroundColor: Colors.black,
                             padding: const EdgeInsets.all(18),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20)),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                           ),
                           onPressed: () {},
-                          child: const Center(
-                            child: Text(
-                              "Start Finding",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black),
+                          child: const Text(
+                            "Start Finding",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                 ],
               );
             } else if (snapshot.hasError) {

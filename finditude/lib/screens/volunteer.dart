@@ -30,8 +30,6 @@ class _VolunteerPageState extends State<VolunteerPage> {
         headers: header,
         body: body);
     if (response.statusCode == 200) {
-      //String stuff =
-      """[{"id": 1, "full_name": "Matthews Ankon Baroi"}, {"id": 8, "full_name": "hshshs"}, {"id": 5, "full_name": "test"}, {"id": 11, "full_name": "final_test"}, {"id": 2, "full_name": "Ankon Baroi"}, {"id": 7, "full_name": "sjsjsjs"}, {"id": 6, "full_name": "sjsjs"}, {"id": 9, "full_name": "shajjajssjsjjsjjsjajajaua"}, {"id": 4, "full_name": "Shex Sami"}, {"id": 3, "full_name": "Shex Shafi-Ul Hasan Sami"}, {"id": 10, "full_name": "a"}]""";
       return jsonDecode(response.body) as List<dynamic>;
       //final jsonData = json.decode(response.body);
       /*
@@ -85,7 +83,6 @@ class _VolunteerPageState extends State<VolunteerPage> {
               (BuildContext context, AsyncSnapshot<List<dynamic>> snapshot) {
             if (snapshot.hasData) {
               List<dynamic> dataList = snapshot.data!;
-
               return SingleChildScrollView(
                 child: GridView.builder(
                   shrinkWrap: true,
@@ -101,22 +98,76 @@ class _VolunteerPageState extends State<VolunteerPage> {
                       onTap: () => Navigator.of(context)
                           .push(volunteerToStartFinding(item['id'])),
                       child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item['full_name'],
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
+                        child: Stack(
+                          children: [
+                            if (item['photo'] != null)
+                              LayoutBuilder(
+                                builder: (BuildContext context,
+                                    BoxConstraints constraints) {
+                                  return FittedBox(
+                                    fit: BoxFit.fitWidth,
+                                    child: SizedBox(
+                                      width: constraints.maxWidth,
+                                      height: constraints
+                                          .maxHeight, // Adjust height if needed
+                                      child: Image.network(
+                                        item['photo'],
+                                        loadingBuilder: (BuildContext context,
+                                            Widget child,
+                                            ImageChunkEvent? loadingProgress) {
+                                          if (loadingProgress == null) {
+                                            return child;
+                                          }
+                                          return Center(
+                                            child: CircularProgressIndicator(
+                                              value: loadingProgress
+                                                          .expectedTotalBytes !=
+                                                      null
+                                                  ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                  : null,
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder: (BuildContext context,
+                                            Object error,
+                                            StackTrace? stackTrace) {
+                                          return const Center(
+                                            child: Icon(Icons.error),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            Positioned.fill(
+                              child: Container(
+                                color: Colors.black.withOpacity(
+                                    0.5), // Adjust the opacity as needed
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        item['full_name'],
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              //Text("ID: ${item['id']}"),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -141,16 +192,19 @@ class _VolunteerPageState extends State<VolunteerPage> {
 class MissingPerson {
   final int id;
   final String fullName;
+  final imageURL;
 
   const MissingPerson({
     required this.id,
     required this.fullName,
+    required this.imageURL,
   });
 
   factory MissingPerson.fromJson(Map<String, dynamic> json) {
     return MissingPerson(
       id: json['id'],
       fullName: json['full_name'],
+      imageURL: json['photo'],
     );
   }
 }
