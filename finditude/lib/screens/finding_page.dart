@@ -1,23 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:finditude/services/UserPreferences.dart';
 import 'package:finditude/screens/login_page.dart';
-import 'package:finditude/screens/home_page.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
 
-class StartFindingPage extends StatefulWidget {
+class FindingPage extends StatefulWidget {
+  const FindingPage({super.key, required this.id});
+
   final int id;
-  const StartFindingPage(this.id, {super.key});
-
   @override
-  State<StartFindingPage> createState() => _StartFindingPageState();
+  State<FindingPage> createState() => _FindingPageState();
 }
 
-class _StartFindingPageState extends State<StartFindingPage> {
+class _FindingPageState extends State<FindingPage> {
   String token = "";
   List<String> imageUrls = [];
   late Future<MissingPerson> futureMissingPerson;
+
+  Future<void> _launchCaller(String contact) async {
+    final url = "tel:$contact";
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    } else {
+      return; //otherwise do nothing
+    }
+  }
+
+  Future<void> reportLocation(int id) async {
+    final Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+    final lattitude = position.latitude;
+    final longitude = position.longitude;
+    final body = jsonEncode({
+      'jwt': token,
+      'id': id.toString(),
+      'lattitude': lattitude,
+      'longitude': longitude
+    });
+    Map<String, String> header = {
+      "Content-Type": "application/json",
+    };
+    final response = await http.post(
+        Uri.parse('http://20.2.65.191:8000/api/reportlocation'),
+        headers: header,
+        body: body);
+    if (response.statusCode != 200) {
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    }
+  }
 
   Future<List<String>> fetchMissingImages(int id) async {
     const url = 'http://20.2.65.191:8000/api/missingimageget';
@@ -42,16 +81,6 @@ class _StartFindingPageState extends State<StartFindingPage> {
       }
     }
     return [];
-  }
-
-  Future<void> startFinding(int id) async {
-    const url = 'http://20.2.65.191:8000/api/startfinding';
-    Map<String, String> header = {
-      "Content-Type": "application/json",
-    };
-    final body = jsonEncode({'jwt': token, 'id': id.toString()});
-    final response =
-        await http.post(Uri.parse(url), headers: header, body: body);
   }
 
   @override
@@ -101,7 +130,7 @@ class _StartFindingPageState extends State<StartFindingPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: Text(
-          "",
+          "Currently Finding",
           style: GoogleFonts.dmSans(
               color: const Color(0xff1cb439),
               textStyle: Theme.of(context).textTheme.headlineSmall,
@@ -213,19 +242,49 @@ class _StartFindingPageState extends State<StartFindingPage> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                           ),
-                          onPressed: () {
-                            startFinding(widget.id);
+                          onPressed: () =>
+                              _launchCaller(snapshot.data!.contact),
+                          child: const Text(
+                            "Contact",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            backgroundColor:
+                                const Color.fromARGB(255, 255, 255, 255),
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.all(18),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onPressed: () async {
+                            await reportLocation(widget.id);
                             if (context.mounted) {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const HomePage()),
-                                (Route<dynamic> route) => false,
-                              );
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(const SnackBar(
+                                content: Text("Reported Live Location!",
+                                    style: TextStyle(color: Colors.white)),
+                                backgroundColor:
+                                    Color.fromARGB(255, 59, 59, 59),
+                              ));
                             }
                           },
                           child: const Text(
-                            "Start Finding",
+                            "Report Live Location",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
@@ -275,7 +334,7 @@ Future<MissingPerson> fetchMissingPerson(
       );
     }
     return const MissingPerson(
-        fullName: "", age: -1, gender: "", identifyingInfo: "");
+        fullName: "", age: -1, gender: "", identifyingInfo: "", contact: "");
   }
 }
 
@@ -284,13 +343,14 @@ class MissingPerson {
   final int age;
   final String gender;
   final String identifyingInfo;
+  final String contact;
 
-  const MissingPerson({
-    required this.fullName,
-    required this.age,
-    required this.gender,
-    required this.identifyingInfo,
-  });
+  const MissingPerson(
+      {required this.fullName,
+      required this.age,
+      required this.gender,
+      required this.identifyingInfo,
+      required this.contact});
 
   factory MissingPerson.fromJson(Map<String, dynamic> json) {
     return MissingPerson(
@@ -298,6 +358,7 @@ class MissingPerson {
       age: json['age'],
       gender: json['gender'],
       identifyingInfo: json['identifying_info'],
+      contact: json['contact'],
     );
   }
 }

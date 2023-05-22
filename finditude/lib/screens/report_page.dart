@@ -21,6 +21,7 @@ class _ReportPageState extends State<ReportPage> {
   final TextEditingController ageController = TextEditingController();
   final TextEditingController identifyingInfoController =
       TextEditingController();
+  final TextEditingController contactController = TextEditingController();
   var genders = [
     "Male",
     "Female",
@@ -29,7 +30,7 @@ class _ReportPageState extends State<ReportPage> {
   ];
 
   Future<int?> postData(String fullName, String age, String gender,
-      String identifyingInfo) async {
+      String identifyingInfo, String contact) async {
     if (fullName == "" || age == "" || gender == "") {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("One or more fields are empty!",
@@ -45,13 +46,14 @@ class _ReportPageState extends State<ReportPage> {
         "age": age,
         "gender": gender,
         "identifying_info": identifyingInfo,
+        "contact": contact
       };
       Map<String, String> header = {
         "Content-Type": "application/json",
       };
       var body = jsonEncode(data);
       final response = await http.post(
-          Uri.parse("http://192.168.1.168:8000/api/missingreg"),
+          Uri.parse("http://20.2.65.191:8000/api/missingreg"),
           headers: header,
           body: body);
       if (response.statusCode == 200) {
@@ -183,6 +185,40 @@ class _ReportPageState extends State<ReportPage> {
                   bottom: 5.0,
                 ),
                 child: Text(
+                  "Contact",
+                  style: GoogleFonts.dmSans(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      textStyle: Theme.of(context).textTheme.titleMedium,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                decoration: const BoxDecoration(
+                  color: Color(0xff141215),
+                  borderRadius: BorderRadius.all(Radius.circular(20)),
+                ),
+                child: TextField(
+                  controller: contactController,
+                  keyboardType: TextInputType.phone,
+                  cursorColor: const Color(0xff1cb439),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 10.0,
+                  right: 0.0,
+                  top: 0.0,
+                  bottom: 5.0,
+                ),
+                child: Text(
                   "Gender",
                   style: GoogleFonts.dmSans(
                       color: const Color.fromARGB(255, 255, 255, 255),
@@ -260,7 +296,8 @@ class _ReportPageState extends State<ReportPage> {
                           fullNameController.text,
                           ageController.text,
                           gender,
-                          identifyingInfoController.text);
+                          identifyingInfoController.text,
+                          contactController.text);
 
                       //print(reportedID);
                       if (reportedID != null) {

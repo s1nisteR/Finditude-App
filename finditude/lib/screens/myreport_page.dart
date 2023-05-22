@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:finditude/services/UserPreferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:finditude/services/UserPreferences.dart';
 import 'package:finditude/screens/login_page.dart';
-import 'package:finditude/screens/home_page.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-class StartFindingPage extends StatefulWidget {
+class MyReportPage extends StatefulWidget {
   final int id;
-  const StartFindingPage(this.id, {super.key});
+  const MyReportPage({super.key, required this.id});
 
   @override
-  State<StartFindingPage> createState() => _StartFindingPageState();
+  State<MyReportPage> createState() => _MyReportPageState();
 }
 
-class _StartFindingPageState extends State<StartFindingPage> {
+class _MyReportPageState extends State<MyReportPage> {
   String token = "";
   List<String> imageUrls = [];
   late Future<MissingPerson> futureMissingPerson;
+  late Future<List<LatLng>> futureLocations;
 
   Future<List<String>> fetchMissingImages(int id) async {
     const url = 'http://20.2.65.191:8000/api/missingimageget';
@@ -44,14 +45,46 @@ class _StartFindingPageState extends State<StartFindingPage> {
     return [];
   }
 
-  Future<void> startFinding(int id) async {
-    const url = 'http://20.2.65.191:8000/api/startfinding';
+  Future<List<LatLng>> fetchLocations(int id) async {
+    const url = 'http://20.2.65.191:8000/api/getlocation';
+    final body = jsonEncode({'jwt': token, 'id': id.toString()});
     Map<String, String> header = {
       "Content-Type": "application/json",
     };
-    final body = jsonEncode({'jwt': token, 'id': id.toString()});
     final response =
         await http.post(Uri.parse(url), headers: header, body: body);
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      //final List<dynamic> latitudes = jsonResponse['latitudes'];
+      final dynamic latitudeData = jsonResponse['lattitudes'];
+      final List<dynamic> latitudes =
+          latitudeData != null ? List<dynamic>.from(latitudeData) : [];
+
+      final dynamic longitudeData = jsonResponse['longitudes'];
+
+      //final List<dynamic> longitudes = jsonResponse['longitudes'];
+      final List<dynamic> longitudes =
+          longitudeData != null ? List<dynamic>.from(longitudeData) : [];
+      //print(latitudes[0]);
+      final List<LatLng> locations = [];
+      for (int i = 0; i < latitudes.length; i++) {
+        final double latitude = double.parse(latitudes[i]);
+        final double longitude = double.parse(longitudes[i]);
+        final LatLng location = LatLng(latitude, longitude);
+        locations.add(location);
+      }
+      return locations;
+    } else {
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    }
+    return [];
   }
 
   @override
@@ -73,6 +106,7 @@ class _StartFindingPageState extends State<StartFindingPage> {
         );
       }
     });
+    futureLocations = fetchLocations(widget.id);
   }
 
   void openImageSlider(BuildContext context) {
@@ -101,7 +135,7 @@ class _StartFindingPageState extends State<StartFindingPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: Text(
-          "",
+          "My Report",
           style: GoogleFonts.dmSans(
               color: const Color(0xff1cb439),
               textStyle: Theme.of(context).textTheme.headlineSmall,
@@ -178,64 +212,39 @@ class _StartFindingPageState extends State<StartFindingPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      "Identifying Information",
-                      style: GoogleFonts.dmSans(
-                        textStyle: Theme.of(context).textTheme.titleMedium,
-                        color: const Color.fromARGB(255, 136, 136, 136),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      snapshot.data!.identifyingInfo,
-                      style: GoogleFonts.dmSans(
-                        textStyle: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            elevation: 0,
-                            backgroundColor:
-                                const Color.fromARGB(255, 34, 182, 46),
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.all(18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                  FutureBuilder<List<LatLng>>(
+                    future: futureLocations,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final List<LatLng> locations = snapshot.data!;
+                        if (locations.isEmpty) {
+                          return const Text("No Reports were Found");
+                        } else {
+                          return SizedBox(
+                            height: 300,
+                            child: GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: locations.first,
+                                zoom: 12.0,
+                              ),
+                              markers: Set<Marker>.from(
+                                locations.map(
+                                  (LatLng location) => Marker(
+                                    markerId: MarkerId(location.toString()),
+                                    position: location,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                          onPressed: () {
-                            startFinding(widget.id);
-                            if (context.mounted) {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const HomePage()),
-                                (Route<dynamic> route) => false,
-                              );
-                            }
-                          },
-                          child: const Text(
-                            "Start Finding",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                          );
+                        }
+                      } else if (snapshot.hasError) {
+                        return Text('${snapshot.error}');
+                      }
+                      return const CircularProgressIndicator();
+                    },
                   ),
-                  const SizedBox(height: 16),
                 ],
               );
             } else if (snapshot.hasError) {

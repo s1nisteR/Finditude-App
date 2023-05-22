@@ -20,7 +20,7 @@ class _MissingImagePageState extends State<MissingImagePage> {
 
   Future<void> _uploadImages() async {
     // Replace with your Django REST API endpoint URL
-    const String apiUrl = 'http://192.168.1.168:8000/api/missingimageupload';
+    const String apiUrl = 'http://20.2.65.191:8000/api/missingimageupload';
 
     for (int i = 0; i < _selectedImages.length; i++) {
       final File imageFile = _selectedImages[i];

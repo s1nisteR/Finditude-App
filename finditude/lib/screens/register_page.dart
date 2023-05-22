@@ -54,7 +54,7 @@ class _RegisterPageState extends State<RegisterPage> {
       };
       var body = jsonEncode(data);
       final response = await http.post(
-          Uri.parse("http://192.168.1.168:8000/api/register"),
+          Uri.parse("http://20.2.65.191:8000/api/register"),
           headers: header,
           body: body);
       if (response.statusCode == 403) {
